@@ -82,7 +82,6 @@ def make_small_dataset(
     for csv_path in sorted(in_dir.glob("*.csv")):
         name = csv_path.name
         out_path = out_dir / name
-        print(name)
 
         # metadata: copy through
         if name in SKIP_AS_IS:
