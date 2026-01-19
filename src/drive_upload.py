@@ -65,37 +65,40 @@ def _find_file_id(service, parent_id: str, name: str) -> Optional[str]:
     return files[0]["id"] if files else None
 
 
-def _upload_with_retries(request, max_retries: int = 8) -> Dict:
+def _upload_with_retries(request, filename: str, max_retries: int = 8):
     """
-    Executes a resumable upload request with retries for transient errors.
-    Works for both create() and update() requests when media_body is resumable.
+    Executes a resumable upload request with retries and progress output.
     """
     attempt = 0
-    while True:
+    response = None
+
+    while response is None:
         try:
-            # For resumable uploads, execute() internally uses next_chunk()
-            return request.execute(num_retries=2)
+            status, response = request.next_chunk()
+            if status:
+                percent = int(status.progress() * 100)
+                print(f"⬆️ Uploading {filename}: {percent}%")
         except (ssl.SSLEOFError, ConnectionError, TimeoutError) as e:
             attempt += 1
             if attempt > max_retries:
                 raise
             sleep_s = min(60, 2 ** attempt)
-            print(f"⚠️ Upload transient error ({type(e).__name__}). Retrying in {sleep_s}s...")
+            print(f"⚠️ Upload interrupted ({type(e).__name__}), retrying in {sleep_s}s...")
             time.sleep(sleep_s)
         except HttpError as e:
-            # Retry on 5xx + rate limits
-            status = getattr(e.resp, "status", None)
-            if status in (429, 500, 502, 503, 504):
+            status_code = getattr(e.resp, "status", None)
+            if status_code in (429, 500, 502, 503, 504):
                 attempt += 1
                 if attempt > max_retries:
                     raise
                 sleep_s = min(60, 2 ** attempt)
-                print(f"⚠️ HTTP {status} during upload. Retrying in {sleep_s}s...")
+                print(f"⚠️ HTTP {status_code}, retrying in {sleep_s}s...")
                 time.sleep(sleep_s)
             else:
                 raise
 
-
+    print(f"✅ Finished uploading {filename}")
+    return response
 # ---------- Public API ----------
 
 def upload_tree(
@@ -155,7 +158,8 @@ def upload_tree(
                 fields="id",
                 supportsAllDrives=True,
             )
-            _upload_with_retries(req)
+            _upload_with_retries(req, filename=name)
+
         else:
             # Create new file
             print(f"⬆️ Creating: {drive_subpath}/{rel_parent}/{name}")
@@ -166,4 +170,5 @@ def upload_tree(
                 fields="id",
                 supportsAllDrives=True,
             )
-            _upload_with_retries(req)
+            _upload_with_retries(req, filename=name)
+
