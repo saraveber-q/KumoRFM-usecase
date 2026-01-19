@@ -4,3 +4,6 @@ __pycache__/
 .ipynb_checkpoints/
 .env
 datasets/
+secrets/token.json
+secrets/client_secret.json
+drive_cache/
