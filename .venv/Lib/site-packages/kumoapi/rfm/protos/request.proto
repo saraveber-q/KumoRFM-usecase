@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+import "kumoapi/rfm/protos/context.proto";
+
+package kumoapi.rfm.protos.request;
+
+enum RunMode {
+  DEBUG = 0;
+  FAST = 1;
+  NORMAL = 2;
+  BEST = 3;
+}
+
+
+message PredictRequest {
+  kumoapi.rfm.protos.context.Context context = 1;
+  RunMode run_mode = 2;
+  bool use_prediction_time = 3;
+  string query=4;
+}
+
+message EvaluateRequest {
+  kumoapi.rfm.protos.context.Context context = 1;
+  RunMode run_mode = 2;
+  repeated string metrics = 3;
+  bool use_prediction_time = 4;
+}

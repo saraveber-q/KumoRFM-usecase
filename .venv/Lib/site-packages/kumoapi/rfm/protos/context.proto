@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package kumoapi.rfm.protos.context;
+
+enum TaskType {
+  BINARY_CLASSIFICATION = 0;
+  MULTICLASS_CLASSIFICATION = 1;
+  REGRESSION = 2;
+  TEMPORAL_LINK_PREDICTION = 3;
+}
+
+enum Stype {
+  NUMERICAL = 0;
+  CATEGORICAL = 1;
+  MULTICATEGORICAL = 2;
+  ID = 3;
+  TEXT = 4;
+  TIMESTAMP = 5;
+  SEQUENCE = 6;
+  IMAGE = 7;
+}
+
+enum EdgeLayout {
+  COO = 0;
+  CSC = 1;
+  REV = 2;
+}
+
+message NestedBytes {
+  bytes value = 1;
+  bytes offset = 2;
+}
+
+message Context {
+  TaskType task_type = 1;
+  repeated string entity_table_names = 2;
+  Subgraph subgraph = 3;
+  bytes y_train = 4;
+  optional bytes y_test = 5;
+  optional int64 top_k = 6;
+  optional int64 step_size = 7;
+  optional Table task_table = 8;
+}
+
+message Table {
+  bytes df = 1;
+  optional bytes row = 2;
+  bytes batch = 3;
+  repeated int64 num_sampled_nodes = 4;
+  map<string, Stype> stype_dict = 5;
+  optional string primary_key = 6;
+}
+
+message Link {
+  EdgeLayout layout = 1;
+  optional bytes row = 2;
+  optional bytes col = 3;
+  repeated int64 num_sampled_edges = 4;
+}
+
+message Subgraph {
+  bytes anchor_time = 1;
+  map<string, Table> table_dict = 2;
+  map<string, Link> link_dict = 3;
+}
