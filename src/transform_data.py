@@ -61,6 +61,12 @@ def melt_cleaned_csvs(
             value_name="value",
         ).rename(columns={ts_col: "timestamp"})
 
+        # ✅ Parse timestamp to datetime (RFM dislikes string timestamps)
+        melted["timestamp"] = pd.to_datetime(melted["timestamp"], errors="coerce")
+
+        # Optional but recommended: remove rows where timestamp couldn't be parsed
+        melted = melted.dropna(subset=["timestamp"])
+
         # Add utility name from filename
         utility = csv_path.stem.replace("_cleaned", "")
         melted.insert(1, "utility", utility)
