@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import os
+import re
 from pathlib import Path
 from typing import Optional, List, Dict
 
@@ -14,6 +15,52 @@ from google.auth.transport.requests import Request
 SCOPES = ["https://www.googleapis.com/auth/drive.file"]
 
 
+def clean_drive_folder_id(raw: str) -> str:
+    """
+    Accepts either:
+      - a folder ID: 1abcDEF...
+      - a full URL: https://drive.google.com/drive/folders/<ID>?...
+    Returns the cleaned folder ID with query params removed.
+    """
+    if raw is None:
+        return ""
+
+    s = raw.strip().strip('"').strip("'")
+
+    # If a full URL was pasted, extract after /folders/
+    if "/folders/" in s:
+        s = s.split("/folders/", 1)[1]
+
+    # Remove query string / fragments
+    s = s.split("?", 1)[0]
+    s = s.split("#", 1)[0]
+    s = s.split("&", 1)[0]
+
+    # Extra safety: remove any whitespace
+    s = s.strip()
+
+    return s
+
+
+def validate_drive_id(folder_id: str) -> None:
+    """
+    Very lightweight validation:
+    Drive IDs are typically URL-safe base64-ish strings.
+    """
+    if not folder_id:
+        raise ValueError("Empty folder_id after cleaning.")
+
+    # Must not contain URL punctuation that indicates user pasted too much
+    if any(ch in folder_id for ch in ["?", "&", "/", "=", " "]):
+        raise ValueError(f"folder_id still contains invalid characters: {folder_id!r}")
+
+    # Typical Drive IDs are 20+ chars. (Not a strict rule, but good guardrail.)
+    if len(folder_id) < 15:
+        raise ValueError(f"folder_id looks too short: {folder_id!r}")
+
+    # Allowed characters check (letters, digits, underscore, dash)
+    if not re.fullmatch(r"[A-Za-z0-9_-]+", folder_id):
+        raise ValueError(f"folder_id has unexpected characters: {folder_id!r}")
 
 
 def get_drive_service(
@@ -30,9 +77,7 @@ def get_drive_service(
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                client_secret_path, SCOPES
-            )
+            flow = InstalledAppFlow.from_client_secrets_file(client_secret_path, SCOPES)
             creds = flow.run_local_server(port=0)
 
         token_file.parent.mkdir(parents=True, exist_ok=True)
@@ -68,9 +113,7 @@ def list_children(service, folder_id: str) -> List[Dict]:
 def download_file(service, file_id: str, dest_path: Path) -> None:
     dest_path.parent.mkdir(parents=True, exist_ok=True)
 
-    request = service.files().get_media(
-        fileId=file_id, supportsAllDrives=True
-    )
+    request = service.files().get_media(fileId=file_id, supportsAllDrives=True)
     fh = io.FileIO(dest_path, "wb")
     downloader = MediaIoBaseDownload(fh, request)
 
@@ -104,9 +147,14 @@ def sync_folder(service, folder_id: str, local_dir: Path) -> None:
 
 
 if __name__ == "__main__":
-    folder_id = os.environ.get("KUMORFM_DRIVE_FOLDER_ID")
-    if not folder_id:
+    raw = os.environ.get("KUMORFM_DRIVE_FOLDER_ID")
+    if not raw:
         raise SystemExit("KUMORFM_DRIVE_FOLDER_ID is not set")
+
+    folder_id = clean_drive_folder_id(raw)
+    validate_drive_id(folder_id)
+
+    print(f"📁 Using Drive folder id: {folder_id}")
 
     out_dir = Path(os.environ.get("KUMORFM_CACHE_DIR", "drive_cache"))
 

@@ -83,17 +83,23 @@ pip install -r requirements.txt
    secrets/client_secret.json
    ```
 3. Ensure your Google account email is added as a **Test User**
-4. Set the Drive folder ID (from the Drive URL)
+4. Delete the token file
+   ```bash
+   secrets\token.json
+   ```
+5. Set the Drive folder ID (from the Drive URL) 
+The part after /folders/ is the ID.
+Folders will be inserted directly under the folder key.
 
 **Windows**
-```powershell
-$env:KUMORFM_DRIVE_FOLDER_ID="YOUR_DRIVE_FOLDER_ID"
-```
+   ```powershell
+   $env:KUMORFM_DRIVE_FOLDER_ID="YOUR_DRIVE_FOLDER_ID"
+   ```
 
 **macOS / Linux**
-```bash
-export KUMORFM_DRIVE_FOLDER_ID="YOUR_DRIVE_FOLDER_ID"
-```
+   ```bash
+   export KUMORFM_DRIVE_FOLDER_ID="YOUR_DRIVE_FOLDER_ID"
+   ```
 
 ➡️ The first run will open a browser window for Google login.
 
