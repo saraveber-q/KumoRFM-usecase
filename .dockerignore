@@ -1,0 +1,10 @@
+.git
+.venv
+.venv_1
+__pycache__
+*.pyc
+datasets
+drive_cache
+secrets
+notebooks
+docs

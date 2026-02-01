@@ -1,0 +1,11 @@
+version: "3.9"
+services:
+  kumorfm:
+    build: .
+    env_file:
+      - .env
+    volumes:
+      - ./secrets:/app/secrets
+      - ./drive_cache:/app/drive_cache
+      - ./datasets:/app/datasets
+    command: ["python", "run_pipeline.py"]
