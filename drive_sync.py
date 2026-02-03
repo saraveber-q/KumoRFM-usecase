@@ -78,7 +78,19 @@ def get_drive_service(
             creds.refresh(Request())
         else:
             flow = InstalledAppFlow.from_client_secrets_file(client_secret_path, SCOPES)
-            creds = flow.run_local_server(port=0)
+            # Prefer local server (opens browser). In headless/docker, fall back to
+            # a no-browser local server flow that prints the auth URL.
+            try:
+                creds = flow.run_local_server(port=0)
+            except Exception:
+                print("No runnable browser found. Using manual auth flow.")
+                print("Open the URL printed below on your host machine.")
+                creds = flow.run_local_server(
+                    host="localhost",      # this is what Google will use in redirect_uri
+                    port=8080,
+                    bind_addr="0.0.0.0",   # this is what the server listens on inside Docker
+                    open_browser=False,
+                )
 
         token_file.parent.mkdir(parents=True, exist_ok=True)
         token_file.write_text(creds.to_json(), encoding="utf-8")
